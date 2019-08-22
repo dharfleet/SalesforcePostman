@@ -1,0 +1,529 @@
+{
+	"info": {
+		"_postman_id": "97b9258a-2aff-4b8d-bcf4-6512fcd76002",
+		"name": "Salesforce Chatter API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "AuthN",
+			"item": [
+				{
+					"name": "AuthN - Internal",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "181411e8-6b95-460e-8488-738ce87eae68",
+								"exec": [
+									"pm.test(\"access_token retrieved\", function () {",
+									"    pm.expect(pm.response.text()).to.include(\"access_token\");",
+									"});",
+									"var jsonResponse = JSON.parse(responseBody);",
+									"pm.environment.set(\"auth-token\", jsonResponse.access_token);",
+									"pm.environment.set(\"instance-url\", jsonResponse.instance_url);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "e0922a24-2fac-41a7-9660-569316cd8126",
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "{{grant-type}}",
+									"type": "text"
+								},
+								{
+									"key": "client_id",
+									"value": "{{client-id}}",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "{{client-secret}}",
+									"type": "text"
+								},
+								{
+									"key": "username",
+									"value": "{{username}}",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "{{password}}{{security-token}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://login.salesforce.com/services/oauth2/token",
+							"protocol": "https",
+							"host": [
+								"login",
+								"salesforce",
+								"com"
+							],
+							"path": [
+								"services",
+								"oauth2",
+								"token"
+							]
+						},
+						"description": "Initial Authentication for an Internal User\n**Remember** to ensure you have the Environment config selected for your **INTERNAL** user."
+					},
+					"response": []
+				},
+				{
+					"name": "AuthN - External",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "3faa45de-2152-40e7-a7f4-2ca6a0786cae",
+								"exec": [
+									"pm.test(\"sessionId retrieved\", function () {",
+									"    pm.expect(pm.response.text()).to.include(\"sessionId\");",
+									"});",
+									"",
+									"",
+									"var jsonData = xml2Json(responseBody);",
+									"var sessionId = jsonData[\"soapenv:Envelope\"][\"soapenv:Body\"][\"loginResponse\"][\"result\"][\"sessionId\"];",
+									"pm.environment.set(\"auth-token\", sessionId);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "4949f0d7-32c8-4ed2-8727-e27e06ba4bc0",
+								"exec": [
+									"postman.setNextRequest(\"Chatter REST API - Get User Id\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "text/xml",
+								"type": "text"
+							},
+							{
+								"key": "SOAPAction",
+								"value": "login",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n<env:Envelope xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n    xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\">\n    <env:Body>\n        <n1:login xmlns:n1=\"urn:partner.soap.sforce.com\">\n            <n1:username>{{username}}</n1:username>\n            <n1:password>{{password}}</n1:password>\n        </n1:login>\n    </env:Body>\n</env:Envelope>"
+						},
+						"url": {
+							"raw": "https://login.salesforce.com/services/Soap/u/47.0",
+							"protocol": "https",
+							"host": [
+								"login",
+								"salesforce",
+								"com"
+							],
+							"path": [
+								"services",
+								"Soap",
+								"u",
+								"47.0"
+							]
+						},
+						"description": "Initial Authentication for an External User\n**Remember** to ensure you have the Environment config selected for your **External** user."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chatter REST API",
+			"item": [
+				{
+					"name": "Chatter API - List Communities",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth-token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/connect/communities",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"connect",
+								"communities"
+							]
+						},
+						"description": "Get a list of all communities available to the context user.\n\n<https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/connect_resources_communities_list.htm>"
+					},
+					"response": []
+				},
+				{
+					"name": "Chatter  API - Get User Id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "c0527df3-7d80-4879-b027-2c3f109482e2",
+								"exec": [
+									"var jsonResponse = JSON.parse(responseBody);",
+									"pm.environment.set(\"current-user-id\", jsonResponse.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth-token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/connect/communities/{{community-id}}/chatter/users/me",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"connect",
+								"communities",
+								"{{community-id}}",
+								"chatter",
+								"users",
+								"me"
+							]
+						},
+						"description": "Gets the current user's User.Id and sets it as the environment variable {{current-user-id}}\n\n<https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/connect_resources_users_UserProfileInformation.htm>"
+					},
+					"response": []
+				}
+			],
+			"description": "<https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/features_communities.htm>"
+		},
+		{
+			"name": "Chatter REST API - Pilot",
+			"item": [
+				{
+					"name": "Chatter API - List Audiences",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"type": "text",
+								"value": "Bearer {{auth-token}}"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/connect/communities/{{community-id}}/personalization/audiences",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"connect",
+								"communities",
+								"{{community-id}}",
+								"personalization",
+								"audiences"
+							]
+						},
+						"description": "Allows an external user to connect to REST API"
+					},
+					"response": []
+				},
+				{
+					"name": "Chatter API - List Nav Menu items",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth-token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/connect/communities/{{community-id}}/navigation-menu/navigation-menu-items",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"connect",
+								"communities",
+								"{{community-id}}",
+								"navigation-menu",
+								"navigation-menu-items"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Chatter API - Create Profile Based Audience",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth-token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Top Customer\",\n    \"customFormula\": \"\",\n    \"formulaFilterType\": \"AllCriteriaMatch\",\n    \"criteria\":[\n        {\n            \"criterionNumber\":\"1\",\n            \"criterionType\": \"Profile\",\n            \"criterionOperator\":\"Equal\",\n            \"criterion\": [\n                {\n                    \"profileId\" : \"00eB0000000foaIIAQ\"\n                }\n            ]\n        }\n    ]\n}\n"
+						},
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/connect/communities/{{community-id}}/personalization/audiences",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"connect",
+								"communities",
+								"{{community-id}}",
+								"personalization",
+								"audiences"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Lightning Platform REST API",
+			"item": [
+				{
+					"name": "REST API - Get Limits",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"type": "text",
+								"value": "Bearer {{auth-token}}"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/limits",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"limits"
+							]
+						},
+						"description": "Lists information about limits in your org. Provided here predominantly as an end-to-end test call.\n\n<https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm>\n\n** Won't work for external users **"
+					},
+					"response": []
+				},
+				{
+					"name": "REST API - SOQL External Profiles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"type": "text",
+								"value": "Bearer {{auth-token}}"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/query/?q=SELECT Id,+Name,+UserType+FROM+Profile+WHERE+UserType+!=+'Standard'",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"query",
+								""
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "SELECT Id,+Name,+UserType+FROM+Profile+WHERE+UserType+!=+'Standard'"
+								}
+							]
+						},
+						"description": "Lists information about limits in your org. Provided here predominantly as an end-to-end test call.\n\n<https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm>\n\n** Won't work for external users **"
+					},
+					"response": []
+				},
+				{
+					"name": "REST API - SOQL Audiences",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"type": "text",
+								"value": "Bearer {{auth-token}}"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/query/?q=SELECT+Id,+AudienceName,+description+FROM+Audience",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								"query",
+								""
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "SELECT+Id,+AudienceName,+description+FROM+Audience"
+								}
+							]
+						},
+						"description": "Lists information about limits in your org. Provided here predominantly as an end-to-end test call.\n\n<https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm>\n\n** Won't work for external users **"
+					},
+					"response": []
+				},
+				{
+					"name": "REST API - Versions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"type": "text",
+								"value": "Bearer {{auth-token}}"
+							}
+						],
+						"url": {
+							"raw": "{{instance-url}}/services/data/{{version}}/",
+							"host": [
+								"{{instance-url}}"
+							],
+							"path": [
+								"services",
+								"data",
+								"{{version}}",
+								""
+							]
+						},
+						"description": "Lists information about limits in your org. Provided here predominantly as an end-to-end test call.\n\n<https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm>"
+					},
+					"response": []
+				}
+			],
+			"description": "<https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_list.htm>",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "072328ed-a41f-4e4e-a3ef-c60fc775b651",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "3be1c4d3-445b-4012-a23f-301a549824e1",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "df7dde04-3db4-4f80-b57f-6fa24b66f300",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "8e4f6186-c1ca-4049-8708-1f4c37db13e4",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
